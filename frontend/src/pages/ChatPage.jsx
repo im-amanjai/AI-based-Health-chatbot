@@ -25,6 +25,7 @@ export default function ChatPage() {
 
   const user = JSON.parse(localStorage.getItem("user"));
 
+  // 💬 Main Chat
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
 
@@ -34,9 +35,20 @@ export default function ChatPage() {
     lng: null
   });
 
+  // 🧠 Hybrid Triage State
+  const [triageMode, setTriageMode] = useState(false);
+  const [currentSymptom, setCurrentSymptom] =
+    useState("");
+  const [questions, setQuestions] = useState([]);
+  const [
+    currentQuestionIndex,
+    setCurrentQuestionIndex
+  ] = useState(0);
+  const [answers, setAnswers] = useState({});
+
   const chatEndRef = useRef(null);
 
-  // 📍 Fetch real location once on page load
+  // 📍 Get user location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -46,13 +58,7 @@ export default function ChatPage() {
             lng: position.coords.longitude
           });
         },
-        (error) => {
-          console.error(
-            "Location access denied:",
-            error.message
-          );
-
-          // Fallback (Bengaluru)
+        () => {
           setLocation({
             lat: 12.9716,
             lng: 77.5946
@@ -60,7 +66,6 @@ export default function ChatPage() {
         }
       );
     } else {
-      // Browser unsupported fallback
       setLocation({
         lat: 12.9716,
         lng: 77.5946
@@ -68,56 +73,154 @@ export default function ChatPage() {
     }
   }, []);
 
-  // Auto-scroll chat
+  // 🔽 Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({
       behavior: "smooth"
     });
   }, [chatHistory]);
 
+  // 🚀 Main Chat Handler
   const handleSend = async () => {
     if (!message.trim()) return;
 
-    // User message
+    // Save user message
     const userMessage = {
       sender: "user",
       text: message
     };
 
-    setChatHistory((prev) => [...prev, userMessage]);
+    setChatHistory((prev) => [
+      ...prev,
+      userMessage
+    ]);
 
     try {
-      const response = await API.post("/health/analyze", {
-        symptoms: [message],
-        lat: location.lat,
-        lng: location.lng
-      });
+      // 🧠 TRIAGE MODE ACTIVE
+      if (triageMode) {
+        const updatedAnswers = {
+          ...answers,
+          [questions[currentQuestionIndex]]:
+            message
+        };
 
-      // Bot response
-      const botMessage = {
-        sender: "bot",
-        risk: response.data.risk,
-        emergency: response.data.emergency,
-        message: response.data.message,
-        hospitals: response.data.hospitals,
-        aiAdvice: response.data.aiAdvice
-      };
+        setAnswers(updatedAnswers);
 
-      setChatHistory((prev) => [...prev, botMessage]);
+        // More questions remaining
+        if (
+          currentQuestionIndex <
+          questions.length - 1
+        ) {
+          const nextIndex =
+            currentQuestionIndex + 1;
 
+          setCurrentQuestionIndex(nextIndex);
+
+          setChatHistory((prev) => [
+            ...prev,
+            {
+              sender: "bot",
+              question:
+                questions[nextIndex]
+            }
+          ]);
+        }
+
+        // Final submission
+        else {
+          const finalResponse =
+            await API.post(
+              "/triage/submit",
+              {
+                symptom:
+                  currentSymptom,
+                answers:
+                  updatedAnswers,
+                lat: location.lat,
+                lng: location.lng
+              }
+            );
+
+          const botMessage = {
+            sender: "bot",
+            risk:
+              finalResponse.data.risk,
+            emergency:
+              finalResponse.data
+                .emergency,
+            message:
+              finalResponse.data
+                .message,
+            hospitals:
+              finalResponse.data
+                .hospitals,
+            aiAdvice:
+              finalResponse.data
+                .aiAdvice
+          };
+
+          setChatHistory((prev) => [
+            ...prev,
+            botMessage
+          ]);
+
+          // Reset triage
+          setTriageMode(false);
+          setCurrentQuestionIndex(0);
+          setQuestions([]);
+          setAnswers({});
+          setCurrentSymptom("");
+        }
+      }
+
+      // 🟢 START TRIAGE MODE
+      else {
+        const response =
+          await API.post(
+            "/triage/start",
+            {
+              symptom: message
+            }
+          );
+
+        setTriageMode(true);
+        setCurrentSymptom(message);
+        setQuestions(
+          response.data.questions
+        );
+        setCurrentQuestionIndex(0);
+
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            sender: "bot",
+            question:
+              response.data
+                .questions[0]
+          }
+        ]);
+      }
     } catch (error) {
-      alert("Analysis failed");
+      alert(
+        error.response?.data?.msg ||
+          "Analysis failed"
+      );
     }
 
     setMessage("");
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f4f8fb", py: 4 }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "#f4f8fb",
+        py: 4
+      }}
+    >
       <Container maxWidth="lg">
         <Grid container spacing={4}>
-
-          {/* LEFT SECTION - CHAT */}
+          {/* LEFT CHAT */}
           <Grid item xs={12} md={8}>
             <Paper
               sx={{
@@ -139,10 +242,11 @@ export default function ChatPage() {
               </Typography>
 
               <Typography sx={{ mb: 2 }}>
-                Describe your symptoms and get instant health guidance.
+                Enter any symptom or disease
+                for adaptive triage.
               </Typography>
 
-              {/* Quick Symptom Buttons */}
+              {/* Quick Buttons */}
               <Box
                 sx={{
                   mb: 3,
@@ -155,14 +259,16 @@ export default function ChatPage() {
                   "Chest pain",
                   "Fever",
                   "Headache",
-                  "Breathing difficulty",
-                  "Cold and cough"
+                  "Dengue",
+                  "Asthma"
                 ].map((symptom) => (
                   <Button
                     key={symptom}
                     variant="outlined"
                     size="small"
-                    onClick={() => setMessage(symptom)}
+                    onClick={() =>
+                      setMessage(symptom)
+                    }
                   >
                     {symptom}
                   </Button>
@@ -178,181 +284,203 @@ export default function ChatPage() {
                   pr: 1
                 }}
               >
-                {chatHistory.map((chat, index) => (
-                  <Box key={index} sx={{ mb: 3 }}>
-
-                    {/* USER MESSAGE */}
-                    {chat.sender === "user" ? (
-                      <Box sx={{ textAlign: "right" }}>
-                        <Typography
+                {chatHistory.map(
+                  (chat, index) => (
+                    <Box
+                      key={index}
+                      sx={{ mb: 3 }}
+                    >
+                      {/* USER */}
+                      {chat.sender ===
+                      "user" ? (
+                        <Box
                           sx={{
-                            bgcolor: "#1976d2",
-                            color: "white",
-                            p: 2,
-                            borderRadius: 3,
-                            display: "inline-block",
-                            maxWidth: "75%"
+                            textAlign:
+                              "right"
                           }}
                         >
-                          {chat.text}
-                        </Typography>
-                      </Box>
-                    ) : (
-
-                      /* BOT RESPONSE */
-                      <Card
-                        sx={{
-                          bgcolor: chat.emergency
-                            ? "#ffebee"
-                            : "#e3f2fd",
-                          border: chat.emergency
-                            ? "2px solid red"
-                            : "1px solid #bbdefb",
-                          borderRadius: 4
-                        }}
-                      >
-                        <CardContent>
-
-                          {/* Risk */}
                           <Typography
-                            fontWeight="bold"
-                            gutterBottom
+                            sx={{
+                              bgcolor:
+                                "#1976d2",
+                              color:
+                                "white",
+                              p: 2,
+                              borderRadius: 3,
+                              display:
+                                "inline-block",
+                              maxWidth:
+                                "75%"
+                            }}
                           >
-                            Risk Level: {chat.risk}
+                            {chat.text}
                           </Typography>
-
-                          {/* Rule-Based Message */}
-                          <Typography sx={{ mb: 2 }}>
-                            {chat.message}
-                          </Typography>
-
-                          {/* 🤖 AI Advice */}
-                          {chat.aiAdvice && (
-                            <Box
-                              sx={{
-                                mt: 2,
-                                p: 2,
-                                bgcolor: "#f1f8e9",
-                                borderRadius: 3,
-                                border:
-                                  "1px solid #8bc34a",
-                                mb: 2
-                              }}
-                            >
-                              <Typography
-                                fontWeight="bold"
-                                gutterBottom
-                              >
-                                🤖 AI Health Insight:
+                        </Box>
+                      ) : (
+                        <Card
+                          sx={{
+                            bgcolor:
+                              chat.emergency
+                                ? "#ffebee"
+                                : "#e3f2fd",
+                            border:
+                              chat.emergency
+                                ? "2px solid red"
+                                : "1px solid #bbdefb",
+                            borderRadius: 4
+                          }}
+                        >
+                          <CardContent>
+                            {/* Question */}
+                            {chat.question && (
+                              <Typography fontWeight="bold">
+                                {`Question ${
+                                  questions.indexOf(
+                                    chat.question
+                                  ) + 1
+                                }/${
+                                  questions.length
+                                }: ${
+                                  chat.question
+                                }`}
                               </Typography>
+                            )}
 
-                              <Typography
-                                sx={{
-                                  whiteSpace:
-                                    "pre-line"
-                                }}
-                              >
-                                {chat.aiAdvice}
-                              </Typography>
-                            </Box>
-                          )}
+                            {/* Final Result */}
+                            {chat.risk && (
+                              <>
+                                <Typography
+                                  fontWeight="bold"
+                                  gutterBottom
+                                >
+                                  Risk Level:{" "}
+                                  {
+                                    chat.risk
+                                  }
+                                </Typography>
 
-                          {/* Emergency Box */}
-                          {chat.emergency && (
-                            <Box
-                              sx={{
-                                p: 2,
-                                bgcolor: "#ffcdd2",
-                                borderRadius: 3,
-                                border:
-                                  "2px solid red",
-                                mb: 2
-                              }}
-                            >
-                              <Typography
-                                color="error"
-                                fontWeight="bold"
-                                gutterBottom
-                              >
-                                <WarningIcon fontSize="small" /> Emergency Steps:
-                              </Typography>
+                                <Typography sx={{ mb: 2 }}>
+                                  {
+                                    chat.message
+                                  }
+                                </Typography>
 
-                              <Typography>
-                                • Stay calm and sit down
-                              </Typography>
-
-                              <Typography>
-                                • Contact emergency services
-                              </Typography>
-
-                              <Typography>
-                                • Visit nearest hospital immediately
-                              </Typography>
-                            </Box>
-                          )}
-
-                          {/* Nearby Hospitals */}
-                          {chat.hospitals?.length > 0 && (
-                            <Box>
-                              <Typography
-                                fontWeight="bold"
-                                gutterBottom
-                              >
-                                Nearby Hospitals:
-                              </Typography>
-
-                              {chat.hospitals.map(
-                                (hospital, i) => (
-                                  <Card
-                                    key={i}
+                                {/* AI Advice */}
+                                {chat.aiAdvice && (
+                                  <Box
                                     sx={{
-                                      mt: 1,
+                                      mt: 2,
+                                      p: 2,
+                                      bgcolor:
+                                        "#f1f8e9",
                                       borderRadius: 3,
-                                      boxShadow: 2
+                                      border:
+                                        "1px solid #8bc34a",
+                                      mb: 2
                                     }}
                                   >
-                                    <CardContent>
-                                      <Typography
-                                        fontWeight="bold"
-                                      >
-                                        <LocalHospitalIcon
-                                          fontSize="small"
-                                          sx={{
-                                            mr: 1
-                                          }}
-                                        />
-                                        {
-                                          hospital.name
-                                        }
-                                      </Typography>
+                                    <Typography fontWeight="bold">
+                                      🤖 AI Health Insight:
+                                    </Typography>
 
-                                      {hospital.distance && (
-                                        <Typography variant="body2">
-                                          Distance:{" "}
-                                          {
-                                            hospital.distance
+                                    <Typography
+                                      sx={{
+                                        whiteSpace:
+                                          "pre-line"
+                                      }}
+                                    >
+                                      {
+                                        chat.aiAdvice
+                                      }
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {/* Emergency */}
+                                {chat.emergency && (
+                                  <Box
+                                    sx={{
+                                      p: 2,
+                                      bgcolor:
+                                        "#ffcdd2",
+                                      borderRadius: 3,
+                                      border:
+                                        "2px solid red",
+                                      mb: 2
+                                    }}
+                                  >
+                                    <Typography
+                                      color="error"
+                                      fontWeight="bold"
+                                    >
+                                      <WarningIcon fontSize="small" /> Emergency Steps:
+                                    </Typography>
+
+                                    <Typography>
+                                      • Stay calm
+                                    </Typography>
+                                    <Typography>
+                                      • Contact emergency services
+                                    </Typography>
+                                    <Typography>
+                                      • Visit nearest hospital immediately
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {/* Hospitals */}
+                                {chat.hospitals?.length >
+                                  0 && (
+                                  <Box>
+                                    <Typography fontWeight="bold">
+                                      Nearby Hospitals:
+                                    </Typography>
+
+                                    {chat.hospitals.map(
+                                      (
+                                        hospital,
+                                        i
+                                      ) => (
+                                        <Card
+                                          key={
+                                            i
                                           }
-                                        </Typography>
-                                      )}
-                                    </CardContent>
-                                  </Card>
-                                )
-                              )}
-                            </Box>
-                          )}
+                                          sx={{
+                                            mt: 1,
+                                            borderRadius: 3
+                                          }}
+                                        >
+                                          <CardContent>
+                                            <Typography fontWeight="bold">
+                                              <LocalHospitalIcon
+                                                fontSize="small"
+                                                sx={{
+                                                  mr: 1
+                                                }}
+                                              />
+                                              {
+                                                hospital.name
+                                              }
+                                            </Typography>
+                                          </CardContent>
+                                        </Card>
+                                      )
+                                    )}
+                                  </Box>
+                                )}
+                              </>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                    </Box>
+                  )
+                )}
 
-                        </CardContent>
-                      </Card>
-                    )}
-
-                  </Box>
-                ))}
-
-                {/* Auto-scroll */}
                 <div ref={chatEndRef}></div>
               </Box>
 
-              {/* Input Section */}
+              {/* Input */}
               <Box
                 sx={{
                   display: "flex",
@@ -362,10 +490,16 @@ export default function ChatPage() {
               >
                 <TextField
                   fullWidth
-                  label="Describe your symptoms..."
+                  label={
+                    triageMode
+                      ? "Answer the question..."
+                      : "Enter symptom or disease..."
+                  }
                   value={message}
                   onChange={(e) =>
-                    setMessage(e.target.value)
+                    setMessage(
+                      e.target.value
+                    )
                   }
                   onKeyDown={(e) =>
                     e.key === "Enter" &&
@@ -388,7 +522,7 @@ export default function ChatPage() {
             </Paper>
           </Grid>
 
-          {/* RIGHT SECTION - PROFILE */}
+          {/* RIGHT PANEL */}
           <Grid item xs={12} md={4}>
             <Paper
               sx={{
@@ -400,7 +534,6 @@ export default function ChatPage() {
               <Typography
                 variant="h5"
                 fontWeight="bold"
-                gutterBottom
               >
                 Welcome, {user?.name}
               </Typography>
@@ -409,23 +542,18 @@ export default function ChatPage() {
                 Email: {user?.email}
               </Typography>
 
-              {/* 📍 Location Status */}
               <Typography sx={{ mt: 1 }}>
                 Location Status:{" "}
-                {location.lat && location.lng
+                {location.lat
                   ? "📍 Live Location Enabled"
-                  : "⚠️ Using Default Location"}
+                  : "⚠️ Default Location"}
               </Typography>
 
               <Typography sx={{ mt: 3 }}>
-                Your AI health assistant helps
-                assess symptoms, explain risks,
-                provide preventive tips, detect
-                emergencies, and suggest nearby
-                healthcare.
+                Adaptive disease triage +
+                AI-powered health guidance.
               </Typography>
 
-              {/* Emergency Tip */}
               <Box
                 sx={{
                   mt: 4,
@@ -434,22 +562,16 @@ export default function ChatPage() {
                   borderRadius: 3
                 }}
               >
-                <Typography
-                  fontWeight="bold"
-                  gutterBottom
-                >
+                <Typography fontWeight="bold">
                   Emergency Tip:
                 </Typography>
 
                 <Typography color="error">
-                  If experiencing chest pain,
-                  breathing difficulty, or severe
-                  bleeding, seek immediate medical
-                  help.
+                  Severe symptoms +
+                  breathlessness = immediate care
                 </Typography>
               </Box>
 
-              {/* Dashboard Button */}
               <Button
                 fullWidth
                 variant="contained"
@@ -460,13 +582,14 @@ export default function ChatPage() {
                   borderRadius: 3
                 }}
                 onClick={() =>
-                  navigate("/dashboard")
+                  navigate(
+                    "/dashboard"
+                  )
                 }
               >
                 View Dashboard
               </Button>
 
-              {/* Logout Button */}
               <Button
                 fullWidth
                 variant="outlined"
@@ -479,14 +602,15 @@ export default function ChatPage() {
                 }}
                 onClick={() => {
                   localStorage.clear();
-                  navigate("/login");
+                  navigate(
+                    "/login"
+                  );
                 }}
               >
                 Logout
               </Button>
             </Paper>
           </Grid>
-
         </Grid>
       </Container>
     </Box>
