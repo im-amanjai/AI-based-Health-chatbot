@@ -8,11 +8,15 @@ import ChatPage from "./pages/ChatPage";
 import Dashboard from "./pages/Dashboard";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ThemeToggle from "./components/ThemeToggle.jsx";
+import { AppThemeProvider } from "./theme/ThemeContext.jsx";
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <AppThemeProvider>
+      <Router>
+        <ThemeToggle />
+        <Routes>
 
         {/* 🌐 Public Routes */}
         <Route path="/" element={<LandingPage />} />
@@ -47,8 +51,9 @@ function App() {
           }
         />
 
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </AppThemeProvider>
   );
 }
 

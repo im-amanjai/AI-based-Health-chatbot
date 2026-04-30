@@ -1,32 +1,50 @@
 import { useEffect, useState } from "react";
 import {
   Box,
-  Container,
-  Grid,
-  Paper,
-  Typography,
+  Button,
   Card,
   CardContent,
-  Button
+  Chip,
+  Container,
+  Paper,
+  Stack,
+  Typography,
 } from "@mui/material";
 
 import {
-  LineChart,
-  Line,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer
 } from "recharts";
 
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import WarningIcon from "@mui/icons-material/Warning";
-import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
 import ChatIcon from "@mui/icons-material/Chat";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
 import LogoutIcon from "@mui/icons-material/Logout";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
+import PersonIcon from "@mui/icons-material/Person";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import WarningIcon from "@mui/icons-material/Warning";
 
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
+
+const cardColors = {
+  total: { bg: "#e2f5f1", color: "#087f7a" },
+  high: { bg: "#fff1f0", color: "#d92d20" },
+  medium: { bg: "#fff7ed", color: "#b45309" },
+  emergency: { bg: "#eff6ff", color: "#2b6cb0" },
+};
+
+const riskColor = {
+  HIGH: { bg: "#fff1f0", color: "#d92d20", border: "#f4a7a1" },
+  MEDIUM: { bg: "#fff7ed", color: "#b45309", border: "#fed7aa" },
+  LOW: { bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -48,285 +66,527 @@ export default function Dashboard() {
     fetchLogs();
   }, []);
 
-  // 📊 Stats
   const totalChecks = logs.length;
-  const highRisk = logs.filter(
-    (log) => log.riskLevel === "HIGH"
-  ).length;
+  const highRisk = logs.filter((log) => log.riskLevel === "HIGH").length;
+  const mediumRisk = logs.filter((log) => log.riskLevel === "MEDIUM").length;
+  const lowRisk = logs.filter((log) => log.riskLevel === "LOW").length;
+  const emergencies = logs.filter((log) => log.emergency).length;
 
-  const mediumRisk = logs.filter(
-    (log) => log.riskLevel === "MEDIUM"
-  ).length;
-
-  const lowRisk = logs.filter(
-    (log) => log.riskLevel === "LOW"
-  ).length;
-
-  const emergencies = logs.filter(
-    (log) => log.emergency
-  ).length;
-
-  // 📈 Chart Data
   const chartData = logs.map((log, index) => ({
+    x: index,
     name: `Check ${index + 1}`,
-    risk:
-      log.riskLevel === "HIGH"
-        ? 3
-        : log.riskLevel === "MEDIUM"
-        ? 2
-        : 1
+    risk: log.riskLevel === "HIGH" ? 3 : log.riskLevel === "MEDIUM" ? 2 : 1,
   }));
 
-  return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f4f8fb", py: 4 }}>
-      <Container maxWidth="lg">
+  const chartXDomain =
+    chartData.length <= 1 ? [-1, 1] : [-0.7, chartData.length - 0.3];
 
-        {/* HEADER */}
+  const stats = [
+    {
+      title: "Total Health Checks",
+      value: totalChecks,
+      icon: <HealthAndSafetyIcon />,
+      tone: cardColors.total,
+    },
+    {
+      title: "High Risk Cases",
+      value: highRisk,
+      icon: <WarningIcon />,
+      tone: cardColors.high,
+    },
+    {
+      title: "Medium Risk Cases",
+      value: mediumRisk,
+      icon: <TrendingUpIcon />,
+      tone: cardColors.medium,
+    },
+    {
+      title: "Emergency Alerts",
+      value: emergencies,
+      icon: <MonitorHeartIcon />,
+      tone: cardColors.emergency,
+    },
+  ];
+
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        py: { xs: 4, md: 5 },
+        background: "var(--page-bg)",
+      }}
+    >
+      <Container maxWidth={false} disableGutters sx={{ px: { xs: 2, md: 3 } }}>
         <Paper
+          elevation={0}
           sx={{
-            p: 4,
-            borderRadius: 4,
-            mb: 4,
-            background: "linear-gradient(to right, #1976d2, #42a5f5)",
-            color: "white"
+            p: { xs: 2.5, md: 3 },
+            borderRadius: 3,
+            mb: 2.5,
+            color: "white",
+            background:
+              "linear-gradient(135deg, rgba(5,93,91,0.94), rgba(43,108,176,0.9)), url(https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1400&q=85)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            boxShadow: "0 24px 70px rgba(16, 37, 38, 0.16)",
           }}
         >
-          <Typography variant="h4" fontWeight="bold">
-            <DashboardIcon sx={{ mr: 1 }} />
-            Health Dashboard
-          </Typography>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", md: "center" }}
+            spacing={2}
+          >
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <DashboardIcon />
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
+                  sx={{ fontSize: { xs: 32, md: 40 } }}
+                >
+                  Health Dashboard
+                </Typography>
+              </Stack>
+              <Typography sx={{ mt: 0.8, color: "rgba(255,255,255,0.82)" }}>
+                Welcome back, {user?.name}. Review triage history and risk
+                patterns from your saved health checks.
+              </Typography>
+            </Box>
 
-          <Typography sx={{ mt: 1 }}>
-            Welcome back, {user?.name}
-          </Typography>
-        </Paper>
-
-        {/* STATS CARDS */}
-        <Grid container spacing={3}>
-          {[
-            {
-              title: "Total Health Checks",
-              value: totalChecks,
-              icon: <HealthAndSafetyIcon />
-            },
-            {
-              title: "High Risk Cases",
-              value: highRisk,
-              icon: <WarningIcon />
-            },
-            {
-              title: "Medium Risk Cases",
-              value: mediumRisk,
-              icon: <WarningIcon />
-            },
-            {
-              title: "Emergency Alerts",
-              value: emergencies,
-              icon: <WarningIcon />
-            }
-          ].map((item, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <Card
+            <Stack
+              direction="row"
+              spacing={1.5}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ xs: "flex-start", md: "flex-end" }}
+              sx={{ ml: { md: "auto" }, flexShrink: 0 }}
+            >
+              <Button
+                variant="contained"
+                startIcon={<ChatIcon />}
                 sx={{
-                  borderRadius: 4,
-                  boxShadow: 3,
-                  textAlign: "center",
-                  py: 2
+                  borderRadius: 2,
+                  minHeight: 48,
+                  bgcolor: "#ffffff",
+                  color: "#087f7a",
+                  fontWeight: 800,
+                  "&:hover": { bgcolor: "#eef8f6" },
+                }}
+                onClick={() => navigate("/chat")}
+              >
+                Back to Chat
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<LogoutIcon />}
+                sx={{
+                  borderRadius: 2,
+                  minHeight: 48,
+                  color: "#ffffff",
+                  borderColor: "rgba(255,255,255,0.65)",
+                  fontWeight: 800,
+                }}
+                onClick={() => {
+                  localStorage.clear();
+                  navigate("/login");
                 }}
               >
-                <CardContent>
-                  <Typography variant="h6">
-                    {item.icon} {item.title}
-                  </Typography>
-
-                  <Typography
-                    variant="h4"
-                    fontWeight="bold"
-                    color="#1976d2"
-                  >
-                    {item.value}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-
-        {/* RISK TREND CHART */}
-        <Paper sx={{ p: 4, borderRadius: 4, mt: 4 }}>
-          <Typography
-            variant="h5"
-            fontWeight="bold"
-            gutterBottom
-          >
-            Risk Trend Analysis
-          </Typography>
-
-          {chartData.length === 0 ? (
-            <Typography>No health data available yet.</Typography>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <XAxis dataKey="name" />
-                <YAxis
-                  ticks={[1, 2, 3]}
-                  tickFormatter={(value) =>
-                    value === 3
-                      ? "High"
-                      : value === 2
-                      ? "Medium"
-                      : "Low"
-                  }
-                />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="risk"
-                  stroke="#1976d2"
-                  strokeWidth={3}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
+                Logout
+              </Button>
+            </Stack>
+          </Stack>
         </Paper>
 
-        {/* PROFILE + HISTORY */}
-        <Grid container spacing={4} sx={{ mt: 2 }}>
-
-          {/* PROFILE SUMMARY */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4 }}>
-              <Typography
-                variant="h5"
-                fontWeight="bold"
-                gutterBottom
-              >
-                Profile Summary
-              </Typography>
-
-              <Typography>
-                <strong>Name:</strong> {user?.name}
-              </Typography>
-
-              <Typography>
-                <strong>Email:</strong> {user?.email}
-              </Typography>
-
-              <Typography sx={{ mt: 3 }}>
-                <strong>Low Risk Cases:</strong> {lowRisk}
-              </Typography>
-
-              <Typography>
-                <strong>Medium Risk Cases:</strong> {mediumRisk}
-              </Typography>
-
-              <Typography>
-                <strong>High Risk Cases:</strong> {highRisk}
-              </Typography>
-            </Paper>
-          </Grid>
-
-          {/* RECENT LOGS */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 3, borderRadius: 4 }}>
-              <Typography
-                variant="h5"
-                fontWeight="bold"
-                gutterBottom
-              >
-                Recent Health Logs
-              </Typography>
-
-              {logs.length === 0 ? (
-                <Typography>No health records yet.</Typography>
-              ) : (
-                logs.slice(0, 5).map((log, index) => (
-                  <Card
-                    key={index}
-                    sx={{
-                      mb: 2,
-                      bgcolor: log.emergency
-                        ? "#ffebee"
-                        : "#ffffff",
-                      borderRadius: 3
-                    }}
-                  >
-                    <CardContent>
-                      <Typography>
-                        <strong>Symptoms:</strong>{" "}
-                        {log.symptoms.join(", ")}
-                      </Typography>
-
-                      <Typography>
-                        <strong>Risk:</strong> {log.riskLevel}
-                      </Typography>
-
-                      <Typography>
-                        <strong>Date:</strong>{" "}
-                        {new Date(
-                          log.createdAt
-                        ).toLocaleString()}
-                      </Typography>
-
-                      {log.emergency && (
-                        <Typography
-                          color="error"
-                          fontWeight="bold"
-                        >
-                          🚨 Emergency Case
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </Paper>
-          </Grid>
-
-        </Grid>
-
-        {/* ACTION BUTTONS */}
         <Box
           sx={{
-            mt: 4,
-            display: "flex",
-            gap: 2,
-            flexWrap: "wrap"
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, minmax(0, 1fr))",
+              lg: "repeat(4, minmax(0, 1fr))",
+            },
+            gap: 2.5,
           }}
         >
-          {/* Back to Chat */}
-          <Button
-            variant="contained"
-            startIcon={<ChatIcon />}
-            sx={{
-              borderRadius: 3,
-              py: 1.5,
-              px: 4
-            }}
-            onClick={() => navigate("/chat")}
-          >
-            Back to Chat
-          </Button>
-
-          {/* Logout */}
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<LogoutIcon />}
-            sx={{
-              borderRadius: 3,
-              py: 1.5,
-              px: 4
-            }}
-            onClick={() => {
-              localStorage.clear();
-              navigate("/login");
-            }}
-          >
-            Logout
-          </Button>
+          {stats.map((item) => (
+            <Box key={item.title} sx={{ minWidth: 0 }}>
+              <Card
+                elevation={0}
+                sx={{
+                  height: "100%",
+                  borderRadius: 3,
+                  border: "1px solid var(--border)",
+                  bgcolor: "var(--surface)",
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box
+                    sx={{
+                      width: "100%",
+                      display: "grid",
+                      gridTemplateColumns: "minmax(0, 1fr) auto",
+                      alignItems: "start",
+                      gap: 2,
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography color="#607174" fontWeight={800}>
+                        {item.title}
+                      </Typography>
+                      <Typography variant="h3" fontWeight={800} sx={{ mt: 1 }}>
+                        {item.value}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        display: "grid",
+                        placeItems: "center",
+                        bgcolor: item.tone.bg,
+                        color: item.tone.color,
+                      }}
+                    >
+                      {item.icon}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          ))}
         </Box>
 
+        <Box
+          sx={{
+            mt: 2.5,
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              lg: "minmax(0, 1.35fr) minmax(340px, 0.65fr)",
+            },
+            gap: 3,
+            alignItems: "stretch",
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 2.5, md: 3 },
+                borderRadius: 3,
+                border: "1px solid var(--border)",
+                bgcolor: "var(--surface)",
+                height: "100%",
+              }}
+            >
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 2 }}
+              >
+                <Box>
+                  <Typography variant="h5" fontWeight={800}>
+                    Risk Trend Analysis
+                  </Typography>
+                  <Typography color="#607174">
+                    Low, medium, and high results across recent checks.
+                  </Typography>
+                </Box>
+              </Stack>
+
+              {chartData.length === 0 ? (
+                <Box
+                  sx={{
+                    minHeight: 300,
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: 2,
+                    border: "1px dashed #9fc6c3",
+                    bgcolor: "#f8fcfb",
+                  }}
+                >
+                  <Typography color="#607174">
+                    No health data available yet.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    width: "100%",
+                    height: { xs: 300, sm: 330 },
+                    mt: { xs: 1.5, md: 0 },
+                    overflow: "hidden",
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={chartData}
+                      margin={{
+                        top: 14,
+                        right: 14,
+                        left: 14,
+                        bottom: 8,
+                      }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="riskFill"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#087f7a"
+                            stopOpacity={0.28}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#087f7a"
+                            stopOpacity={0.03}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#d7e6e4" />
+                      <XAxis
+                        dataKey="x"
+                        type="number"
+                        domain={chartXDomain}
+                        ticks={chartData.map((item) => item.x)}
+                        // tickFormatter={(value) =>
+                        //   chartData.find((item) => item.x === value)?.name || ""
+                        // }
+                        stroke="var(--muted)"
+                        tickMargin={8}
+                        interval={0}
+                      />
+                      <YAxis
+                        width={62}
+                        domain={[1, 3]}
+                        ticks={[1, 2, 3]}
+                        stroke="var(--muted)"
+                        tickMargin={8}
+                        tickFormatter={(value) =>
+                          value === 3 ? "High" : value === 2 ? "Medium" : "Low"
+                        }
+                      />
+                      <Tooltip
+                        formatter={(value) => [
+                          value === 3 ? "High" : value === 2 ? "Medium" : "Low",
+                          "Risk",
+                        ]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="risk"
+                        stroke="#087f7a"
+                        strokeWidth={3}
+                        fill="url(#riskFill)"
+                        dot={{
+                          r: 4,
+                          fill: "#087f7a",
+                          stroke: "#ffffff",
+                          strokeWidth: 2,
+                        }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Box>
+              )}
+            </Paper>
+          </Box>
+
+          <Box sx={{ minWidth: 0 }}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                border: "1px solid var(--border)",
+                bgcolor: "var(--surface)",
+                height: "100%",
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                sx={{ mb: 2.5 }}
+              >
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2,
+                    display: "grid",
+                    placeItems: "center",
+                    bgcolor: "#e2f5f1",
+                    color: "#087f7a",
+                  }}
+                >
+                  <PersonIcon />
+                </Box>
+                <Box>
+                  <Typography variant="h6" fontWeight={800}>
+                    Profile Summary
+                  </Typography>
+                  <Typography color="var(--muted)">{user?.email}</Typography>
+                </Box>
+              </Stack>
+
+              <Stack spacing={1.5}>
+                {[
+                  ["Name", user?.name || "User"],
+                  ["Low Risk Cases", lowRisk],
+                  ["Medium Risk Cases", mediumRisk],
+                  ["High Risk Cases", highRisk],
+                ].map(([label, value]) => (
+                  <Stack
+                    key={label}
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    spacing={2}
+                    sx={{
+                      p: 1.7,
+                      borderRadius: 2,
+                      bgcolor: "var(--surface-soft)",
+                      border: "1px solid var(--border)",
+                      gap: 2,
+                    }}
+                  >
+                    <Typography color="var(--muted)" fontWeight={700}>
+                      {label}
+                    </Typography>
+                    <Typography fontWeight={800}>{value}</Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </Paper>
+          </Box>
+        </Box>
+
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 3,
+            p: { xs: 2.5, md: 3 },
+            borderRadius: 3,
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+            bgcolor: "background.paper",
+          }}
+        >
+          <Typography variant="h5" fontWeight={800} gutterBottom>
+            Recent Health Logs
+          </Typography>
+
+          {logs.length === 0 ? (
+            <Typography color="text.secondary">
+              No health records yet.
+            </Typography>
+          ) : (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  lg: logs.length === 1 ? "1fr" : "repeat(2, minmax(0, 1fr))",
+                },
+                gap: 1.5,
+              }}
+            >
+              {logs.slice(0, 6).map((log, index) => {
+                const tone = riskColor[log.riskLevel] || riskColor.LOW;
+
+                return (
+                  <Box key={index} sx={{ minWidth: 0 }}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        height: "100%",
+                        borderRadius: 2,
+                        border: (theme) =>
+                          `1px solid ${
+                            log.emergency
+                              ? theme.palette.error.light
+                              : theme.palette.divider
+                          }`,
+                        bgcolor: (theme) =>
+                          log.emergency
+                            ? theme.palette.mode === "light"
+                              ? "#fff7f6"
+                              : "#3b1f1f"
+                            : theme.palette.background.paper,
+                      }}
+                    >
+                      <CardContent sx={{ p: { xs: 2, md: 2.25 } }}>
+                        <Stack
+                          direction={{ xs: "column", md: "row" }}
+                          justifyContent="space-between"
+                          alignItems={{ xs: "flex-start", md: "center" }}
+                          spacing={2}
+                        >
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                              sx={{ mb: 1 }}
+                            >
+                              <Chip
+                                label={log.riskLevel}
+                                sx={{
+                                  borderRadius: 2,
+                                  bgcolor: tone.bg,
+                                  color: tone.color,
+                                  border: `1px solid ${tone.border}`,
+                                  fontWeight: 900,
+                                }}
+                              />
+                              {log.emergency && (
+                                <WarningIcon sx={{ color: "error.main" }} />
+                              )}
+                            </Stack>
+
+                            <Typography fontWeight={800}>
+                              {log.symptoms?.join(", ")}
+                            </Typography>
+                          </Box>
+
+                          <Box
+                            sx={{
+                              textAlign: { xs: "left", md: "right" },
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Typography color="text.secondary">
+                              {new Date(log.createdAt).toLocaleString()}
+                            </Typography>
+
+                            {log.emergency && (
+                              <Typography
+                                color="error.main"
+                                fontWeight={800}
+                                sx={{ mt: 0.5 }}
+                              >
+                                Emergency Case
+                              </Typography>
+                            )}
+                          </Box>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+        </Paper>
       </Container>
     </Box>
   );
