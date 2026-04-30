@@ -140,8 +140,8 @@ export default function LandingPage() {
                   px: 1,
                   maxWidth: "100%",
                   borderRadius: 2,
-                  bgcolor: "rgba(213, 255, 253, 0.11)",
-                  color: "#cdf7f6",
+                  bgcolor: "rgba(8, 127, 122, 0.11)",
+                  color: "#055d5b",
                   fontWeight: 800,
                   "& .MuiChip-label": {
                     overflow: "hidden",
