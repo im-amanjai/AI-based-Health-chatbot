@@ -22,6 +22,7 @@ import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import SendIcon from "@mui/icons-material/Send";
+import MicIcon from "@mui/icons-material/Mic";
 import ShieldIcon from "@mui/icons-material/Shield";
 import WarningIcon from "@mui/icons-material/Warning";
 
@@ -119,6 +120,8 @@ export default function ChatPage() {
   const user = JSON.parse(localStorage.getItem("user"));
 
   const [message, setMessage] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(true);
   const [chatHistory, setChatHistory] = useState([]);
 
   const [location, setLocation] = useState({
@@ -164,86 +167,294 @@ export default function ChatPage() {
     });
   }, [chatHistory]);
 
-  const handleSend = async () => {
-    if (!message.trim()) return;
+const handleSend = async (
+  voiceInput = null
+) => {
+  const finalMessage =
+    voiceInput || message;
 
-    const userMessage = {
-      sender: "user",
-      text: message,
-    };
+  if (
+    !finalMessage.trim()
+  )
+    return;
 
-    setChatHistory((prev) => [...prev, userMessage]);
+  const userMessage = {
+    sender: "user",
+    text: finalMessage
+  };
 
-    try {
-      if (triageMode) {
-        const updatedAnswers = {
+  setChatHistory(
+    (prev) => [
+      ...prev,
+      userMessage
+    ]
+  );
+
+  try {
+    if (triageMode) {
+      const updatedAnswers =
+        {
           ...answers,
-          [questions[currentQuestionIndex]]: message,
+          [questions[
+            currentQuestionIndex
+          ]]:
+            finalMessage
         };
 
-        setAnswers(updatedAnswers);
+      setAnswers(
+        updatedAnswers
+      );
 
-        if (currentQuestionIndex < questions.length - 1) {
-          const nextIndex = currentQuestionIndex + 1;
+      if (
+        currentQuestionIndex <
+        questions.length - 1
+      ) {
+        const nextIndex =
+          currentQuestionIndex +
+          1;
 
-          setCurrentQuestionIndex(nextIndex);
+        setCurrentQuestionIndex(
+          nextIndex
+        );
 
-          setChatHistory((prev) => [
-            ...prev,
-            {
-              sender: "bot",
-              question: questions[nextIndex],
-            },
-          ]);
-        } else {
-          const finalResponse = await API.post("/triage/submit", {
-            symptom: currentSymptom,
-            answers: updatedAnswers,
-            lat: location.lat,
-            lng: location.lng,
-          });
+const nextQuestion =
+  questions[nextIndex];
 
-          const botMessage = {
-            sender: "bot",
-            risk: finalResponse.data.risk,
-            emergency: finalResponse.data.emergency,
-            message: finalResponse.data.message,
-            hospitals: finalResponse.data.hospitals,
-            aiAdvice: finalResponse.data.aiAdvice,
-          };
+setChatHistory(
+  (prev) => [
+    ...prev,
+    {
+      sender: "bot",
+      question:
+        nextQuestion
+    }
+  ]
+);
 
-          setChatHistory((prev) => [...prev, botMessage]);
+speakText(
+  nextQuestion
+);
 
-          setTriageMode(false);
-          setCurrentQuestionIndex(0);
-          setQuestions([]);
-          setAnswers({});
-          setCurrentSymptom("");
-        }
       } else {
-        const response = await API.post("/triage/start", {
-          symptom: message,
-        });
+        const finalResponse =
+          await API.post(
+            "/triage/submit",
+            {
+              symptom:
+                currentSymptom,
+              answers:
+                updatedAnswers,
+              lat: location.lat,
+              lng: location.lng
+            }
+          );
 
-        setTriageMode(true);
-        setCurrentSymptom(message);
-        setQuestions(response.data.questions);
-        setCurrentQuestionIndex(0);
-
-        setChatHistory((prev) => [
-          ...prev,
+        const botMessage =
           {
             sender: "bot",
-            question: response.data.questions[0],
-          },
-        ]);
+            risk:
+              finalResponse.data
+                .risk,
+            emergency:
+              finalResponse.data
+                .emergency,
+            message:
+              finalResponse.data
+                .message,
+            hospitals:
+              finalResponse.data
+                .hospitals,
+            aiAdvice:
+              finalResponse.data
+                .aiAdvice
+          };
+
+setChatHistory(
+  (prev) => [
+    ...prev,
+    botMessage
+  ]
+);
+
+//  Speak final diagnosis
+const finalSpeech =
+  `${finalResponse.data.risk} risk. ${finalResponse.data.message}`;
+
+speakText(
+  finalSpeech
+);
+
+        setTriageMode(
+          false
+        );
+        setCurrentQuestionIndex(
+          0
+        );
+        setQuestions([]);
+        setAnswers({});
+        setCurrentSymptom(
+          ""
+        );
       }
-    } catch (error) {
-      alert(error.response?.data?.msg || "Analysis failed");
+
+    } else {
+      const response =
+        await API.post(
+          "/triage/start",
+          {
+            symptom:
+              finalMessage
+          }
+        );
+
+      setTriageMode(true);
+      setCurrentSymptom(
+        finalMessage
+      );
+      setQuestions(
+        response.data
+          .questions
+      );
+      setCurrentQuestionIndex(
+        0
+      );
+
+const firstQuestion =
+  response.data
+    .questions[0];
+
+setChatHistory(
+  (prev) => [
+    ...prev,
+    {
+      sender: "bot",
+      question:
+        firstQuestion
+    }
+  ]
+);
+
+speakText(
+  firstQuestion
+);
     }
 
-    setMessage("");
+  } catch (error) {
+    alert(
+      error.response?.data
+        ?.msg ||
+        "Analysis failed"
+    );
+  }
+
+  setMessage("");
+};
+const startListening = () => {
+  // Prevent duplicate sessions
+  if (isListening) return;
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert(
+      "Speech recognition not supported in this browser."
+    );
+    return;
+  }
+
+  const recognition =
+    new SpeechRecognition();
+
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  setIsListening(true);
+
+  recognition.start();
+
+  recognition.onresult = (
+    event
+  ) => {
+const transcript =
+  event.results[0][0]
+    .transcript
+    .trim()
+    .replace(/\.$/, "")
+    .toLowerCase();
+
+    setMessage(
+      transcript
+    );
+
+    setIsListening(
+      false
+    );
+
+    // Auto send spoken input
+    handleSend(
+      transcript
+    );
   };
+
+  recognition.onerror =
+    (event) => {
+      console.error(
+        "Speech recognition error:",
+        event.error
+      );
+
+      setIsListening(
+        false
+      );
+    };
+
+  recognition.onend =
+    () => {
+      setIsListening(
+        false
+      );
+    };
+};
+const speakText = (text) => {
+  if (
+    !window.speechSynthesis
+  )
+    return;
+
+  const utterance =
+    new SpeechSynthesisUtterance(
+      text
+    );
+
+  utterance.lang =
+    "en-US";
+
+  utterance.rate = 1;
+  utterance.pitch = 1;
+
+  // Stop overlap
+  window.speechSynthesis.cancel();
+
+  utterance.onend =
+    () => {
+      // 🎤 Auto restart mic ONLY during question flow
+      if (
+        triageMode && 
+        voiceMode
+      ) {
+        setTimeout(() => {
+          startListening();
+        }, 700);
+      }
+    };
+
+  window.speechSynthesis.speak(
+    utterance
+  );
+};
 
   const activeProgress =
     triageMode && questions.length
@@ -345,6 +556,35 @@ export default function ChatPage() {
               }}
             />
             <Chip
+  icon={<MicIcon />}
+  label={
+    voiceMode
+      ? "Voice Mode ON"
+      : "Voice Mode OFF"
+  }
+  onClick={() =>
+    setVoiceMode(
+      !voiceMode
+    )
+  }
+  sx={{
+    borderRadius: 2,
+    cursor: "pointer",
+    bgcolor: voiceMode
+      ? "#e2f5f1"
+      : "#f3f4f6",
+    color: voiceMode
+      ? "#055d5b"
+      : "#6b7280",
+    fontWeight: 800,
+    "&:hover": {
+      bgcolor: voiceMode
+        ? "#c9ebe5"
+        : "#e5e7eb"
+    }
+  }}
+/>
+            <Chip
               icon={<MonitorHeartIcon />}
               label={`Triage: ${activeProgress}`}
               sx={{
@@ -359,6 +599,49 @@ export default function ChatPage() {
                 },
               }}
             />
+<Chip
+  icon={<MicIcon />}
+  label={
+    !voiceMode
+      ? "Voice: OFF"
+      : voiceMode &&
+        triageMode
+        ? "Voice: Auto Interview"
+        : isListening
+          ? "Voice: Listening..."
+          : "Voice: Ready"
+  }
+  sx={{
+    borderRadius: 2,
+    bgcolor:
+      !voiceMode
+        ? "#f3f4f6"
+        : voiceMode &&
+          triageMode
+          ? "#eff6ff"
+          : isListening
+            ? "#fff1f0"
+            : "#f0fdf4",
+
+    color:
+      !voiceMode
+        ? "#6b7280"
+        : voiceMode &&
+          triageMode
+          ? "#2b6cb0"
+          : isListening
+            ? "#d92d20"
+            : "#15803d",
+
+    fontWeight: 800,
+    maxWidth: "100%",
+
+    "& .MuiChip-label": {
+      overflow: "hidden",
+      textOverflow: "ellipsis"
+    }
+  }}
+/>
           </Box>
         </Stack>
 
@@ -569,9 +852,26 @@ export default function ChatPage() {
                                     {questions.indexOf(chat.question) + 1}/
                                     {questions.length}
                                   </Typography>
-                                  <Typography fontWeight={800} sx={{ mt: 0.5 }}>
-                                    {chat.question}
-                                  </Typography>
+                               <>
+  <Typography
+    fontWeight={800}
+    sx={{ mt: 0.5 }}
+  >
+    {chat.question}
+  </Typography>
+
+  <Typography
+    variant="caption"
+    sx={{
+      display: "block",
+      mt: 0.8,
+      color: "#087f7a",
+      fontWeight: 700
+    }}
+  >
+    🎤 Tap mic or type your answer
+  </Typography>
+</>
                                 </Box>
                               </Stack>
                             )}
@@ -744,34 +1044,109 @@ export default function ChatPage() {
                   bgcolor: "var(--surface)",
                 }}
               >
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                  <TextField
-                    fullWidth
-                    label={
-                      triageMode
-                        ? "Answer the question..."
-                        : "Enter symptom or disease..."
-                    }
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  />
+<Stack
+  direction={{ xs: "column", sm: "row" }}
+  spacing={1.5}
+>
+  {/* TEXT / VOICE INPUT */}
+  <TextField
+    fullWidth
+    label={
+      triageMode
+        ? "Answer by typing or voice..."
+        : "Enter symptom/disease by typing or voice..."
+    }
+    value={message}
+    onChange={(e) =>
+      setMessage(
+        e.target.value
+      )
+    }
+    onKeyDown={(e) =>
+      e.key === "Enter" &&
+      handleSend()
+    }
+  />
 
-                  <Button
-                    variant="contained"
-                    endIcon={<SendIcon />}
-                    onClick={handleSend}
-                    sx={{
-                      px: 4,
-                      borderRadius: 2,
-                      bgcolor: "#087f7a",
-                      fontWeight: 800,
-                      "&:hover": { bgcolor: "#055d5b" },
-                    }}
-                  >
-                    Send
-                  </Button>
-                </Stack>
+  {/* MIC BUTTON */}
+<Button
+  variant="outlined"
+  onClick={
+    voiceMode &&
+    triageMode
+      ? undefined
+      : startListening
+  }
+  disabled={
+    voiceMode &&
+    triageMode
+  }
+    sx={{
+      minWidth: 72,
+      borderRadius: 2,
+      fontWeight: 800,
+      borderColor:
+        isListening
+          ? "#d92d20"
+          : "#087f7a",
+      color:
+        isListening
+          ? "#d92d20"
+          : "#087f7a",
+      bgcolor:
+        isListening
+          ? "#fff1f0"
+          : "transparent",
+      "&:hover": {
+        bgcolor:
+          isListening
+            ? "#ffe4e1"
+            : "#eef8f6"
+      }
+    }}
+  >
+    <Stack
+      direction="column"
+      alignItems="center"
+      spacing={0.4}
+    >
+      <MicIcon />
+      <Typography
+        variant="caption"
+        fontWeight={800}
+      >
+{voiceMode &&
+triageMode
+  ? "Auto"
+  : isListening
+    ? "Listening..."
+    : "Voice"}
+      </Typography>
+    </Stack>
+  </Button>
+
+  {/* SEND BUTTON */}
+  <Button
+    variant="contained"
+    endIcon={
+      <SendIcon />
+    }
+    onClick={
+      handleSend
+    }
+    sx={{
+      px: 4,
+      borderRadius: 2,
+      bgcolor: "#087f7a",
+      fontWeight: 800,
+      "&:hover": {
+        bgcolor: "#055d5b"
+      }
+    }}
+  >
+    Send
+  </Button>
+</Stack>
               </Box>
             </Paper>
           </Box>
