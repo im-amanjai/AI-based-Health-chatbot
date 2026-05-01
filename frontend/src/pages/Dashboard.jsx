@@ -49,22 +49,57 @@ const riskColor = {
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("user"));
+const [user, setUser] = useState(
+  JSON.parse(
+    localStorage.getItem("user")
+  ) || {}
+);
 
-  const [logs, setLogs] = useState([]);
+const [logs, setLogs] =
+  useState([]);
 
-  useEffect(() => {
-    const fetchLogs = async () => {
+//Fetch BOTH logs + latest profile
+useEffect(() => {
+  const fetchDashboardData =
+    async () => {
       try {
-        const res = await API.get("/health/logs");
-        setLogs(res.data);
+        // Health logs
+        const logsRes =
+          await API.get(
+            "/health/logs"
+          );
+
+        setLogs(
+          logsRes.data
+        );
+
+        // Latest profile
+        const profileRes =
+          await API.get(
+            "/user/profile"
+          );
+
+        setUser(
+          profileRes.data
+        );
+
+        // Sync localStorage
+        localStorage.setItem(
+          "user",
+          JSON.stringify(
+            profileRes.data
+          )
+        );
+
       } catch (error) {
-        console.error("Failed to fetch logs");
+        console.error(
+          "Failed to fetch dashboard data"
+        );
       }
     };
 
-    fetchLogs();
-  }, []);
+  fetchDashboardData();
+}, []);
 
   const totalChecks = logs.length;
   const highRisk = logs.filter((log) => log.riskLevel === "HIGH").length;
@@ -117,86 +152,164 @@ export default function Dashboard() {
       }}
     >
       <Container maxWidth={false} disableGutters sx={{ px: { xs: 2, md: 3 } }}>
-        <Paper
-          elevation={0}
+  <Paper
+    elevation={0}
+    sx={{
+      p: { xs: 2.5, md: 3 },
+      borderRadius: 3,
+      mb: 2.5,
+      color: "white",
+      background:
+        "linear-gradient(135deg, rgba(5,93,91,0.94), rgba(43,108,176,0.9)), url(https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1400&q=85)",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      boxShadow:
+        "0 24px 70px rgba(16, 37, 38, 0.16)"
+    }}
+  >
+    <Stack
+      direction={{
+        xs: "column",
+        md: "row"
+      }}
+      justifyContent="space-between"
+      alignItems={{
+        xs: "flex-start",
+        md: "center"
+      }}
+      spacing={2}
+    >
+      {/* LEFT SECTION */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          alignItems="center"
+        >
+          <DashboardIcon />
+
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            sx={{
+              fontSize: {
+                xs: 32,
+                md: 40
+              }
+            }}
+          >
+            Health Dashboard
+          </Typography>
+        </Stack>
+
+        <Typography
           sx={{
-            p: { xs: 2.5, md: 3 },
-            borderRadius: 3,
-            mb: 2.5,
-            color: "white",
-            background:
-              "linear-gradient(135deg, rgba(5,93,91,0.94), rgba(43,108,176,0.9)), url(https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1400&q=85)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            boxShadow: "0 24px 70px rgba(16, 37, 38, 0.16)",
+            mt: 0.8,
+            color:
+              "rgba(255,255,255,0.82)"
           }}
         >
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            justifyContent="space-between"
-            alignItems={{ xs: "flex-start", md: "center" }}
-            spacing={2}
-          >
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <DashboardIcon />
-                <Typography
-                  variant="h4"
-                  fontWeight={800}
-                  sx={{ fontSize: { xs: 32, md: 40 } }}
-                >
-                  Health Dashboard
-                </Typography>
-              </Stack>
-              <Typography sx={{ mt: 0.8, color: "rgba(255,255,255,0.82)" }}>
-                Welcome back, {user?.name}. Review triage history and risk
-                patterns from your saved health checks.
-              </Typography>
-            </Box>
+          Welcome back, {user?.name}.
+          Review triage history and
+          risk patterns from your
+          saved health checks.
+        </Typography>
+      </Box>
 
-            <Stack
-              direction="row"
-              spacing={1.5}
-              flexWrap="wrap"
-              useFlexGap
-              justifyContent={{ xs: "flex-start", md: "flex-end" }}
-              sx={{ ml: { md: "auto" }, flexShrink: 0 }}
-            >
-              <Button
-                variant="contained"
-                startIcon={<ChatIcon />}
-                sx={{
-                  borderRadius: 2,
-                  minHeight: 48,
-                  bgcolor: "#ffffff",
-                  color: "#087f7a",
-                  fontWeight: 800,
-                  "&:hover": { bgcolor: "#eef8f6" },
-                }}
-                onClick={() => navigate("/chat")}
-              >
-                Back to Chat
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<LogoutIcon />}
-                sx={{
-                  borderRadius: 2,
-                  minHeight: 48,
-                  color: "#ffffff",
-                  borderColor: "rgba(255,255,255,0.65)",
-                  fontWeight: 800,
-                }}
-                onClick={() => {
-                  localStorage.clear();
-                  navigate("/login");
-                }}
-              >
-                Logout
-              </Button>
-            </Stack>
-          </Stack>
-        </Paper>
+      {/* RIGHT BUTTONS */}
+      <Stack
+        direction="row"
+        spacing={1.5}
+        flexWrap="wrap"
+        useFlexGap
+        justifyContent={{
+          xs: "flex-start",
+          md: "flex-end"
+        }}
+        sx={{
+          ml: { md: "auto" },
+          flexShrink: 0
+        }}
+      >
+        {/* BACK TO CHAT */}
+        <Button
+          variant="contained"
+          startIcon={<ChatIcon />}
+          sx={{
+            borderRadius: 2,
+            minHeight: 48,
+            bgcolor: "#ffffff",
+            color: "#087f7a",
+            fontWeight: 800,
+            "&:hover": {
+              bgcolor: "#eef8f6"
+            }
+          }}
+          onClick={() =>
+            navigate("/chat")
+          }
+        >
+          Back to Chat
+        </Button>
+
+        {/* PROFILE BUTTON */}
+        <Button
+          variant="contained"
+          startIcon={<PersonIcon />}
+          sx={{
+            borderRadius: 2,
+            minHeight: 48,
+            bgcolor: "#e2f5f1",
+            color: "#055d5b",
+            fontWeight: 800,
+            "&:hover": {
+              bgcolor: "#c9ebe5"
+            }
+          }}
+          onClick={() =>
+            navigate(
+              "/profile-view"
+            )
+          }
+        >
+          Profile
+        </Button>
+
+        {/* LOGOUT */}
+        <Button
+          variant="outlined"
+          startIcon={
+            <LogoutIcon />
+          }
+          sx={{
+            borderRadius: 2,
+            minHeight: 48,
+            color: "#ffffff",
+            borderColor:
+              "rgba(255,255,255,0.65)",
+            fontWeight: 800,
+            "&:hover": {
+              borderColor:
+                "#ffffff",
+              bgcolor:
+                "rgba(255,255,255,0.08)"
+            }
+          }}
+          onClick={() => {
+            localStorage.clear();
+            navigate("/login");
+          }}
+        >
+          Logout
+        </Button>
+      </Stack>
+    </Stack>
+  </Paper>
 
         <Box
           sx={{

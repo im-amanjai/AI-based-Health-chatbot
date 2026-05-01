@@ -23,7 +23,7 @@ export default function ProfileSetup() {
     age: "",
     gender: "",
     conditions: "",
-    lifestyle: ""
+    habits: ""
   });
 
   const handleChange = (e) => {
@@ -37,23 +37,37 @@ export default function ProfileSetup() {
     e.preventDefault();
 
     try {
-      await API.put("/user/profile", {
+      const response = await API.put("/user/profile", {
         age: Number(formData.age),
         gender: formData.gender,
+
+        // Existing medical conditions
         conditions: formData.conditions
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean),
-        lifestyle: formData.lifestyle
+
+        // Updated field: Habits / Symptoms
+        habits: formData.habits
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean)
       });
 
+      // Save updated user locally
+      localStorage.setItem(
+        "user",
+        JSON.stringify(response.data.user)
+      );
+
       alert("Profile updated successfully!");
       navigate("/chat");
+
     } catch (error) {
-      alert(error.response?.data?.msg || "Profile update failed");
+      alert(
+        error.response?.data?.msg ||
+          "Profile update failed"
+      );
     }
   };
 
@@ -65,8 +79,13 @@ export default function ProfileSetup() {
         background: "var(--page-bg)"
       }}
     >
-      <Container maxWidth={false} disableGutters sx={{ px: { xs: 2, md: 3 } }}>
+      <Container
+        maxWidth={false}
+        disableGutters
+        sx={{ px: { xs: 2, md: 3 } }}
+      >
         <Box sx={{ width: "100%", mx: "auto" }}>
+          {/* HERO SECTION */}
           <Paper
             elevation={0}
             sx={{
@@ -81,174 +100,246 @@ export default function ProfileSetup() {
                 "linear-gradient(rgba(5, 93, 91, 0.78), rgba(16, 37, 38, 0.84)), url(https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1500&q=85)",
               backgroundSize: "cover",
               backgroundPosition: "center",
-              boxShadow: "0 24px 70px rgba(16, 37, 38, 0.18)"
+              boxShadow:
+                "0 24px 70px rgba(16, 37, 38, 0.18)"
             }}
           >
-            <MonitorHeartIcon sx={{ fontSize: 44, mb: 3 }} />
+            <MonitorHeartIcon
+              sx={{
+                fontSize: 44,
+                mb: 3
+              }}
+            />
+
             <Typography
               variant="h3"
               fontWeight={800}
               lineHeight={1.08}
-              sx={{ fontSize: { xs: 40, md: 58 } }}
+              sx={{
+                fontSize: {
+                  xs: 40,
+                  md: 58
+                }
+              }}
             >
               Personalize your care.
             </Typography>
+
             <Typography
               sx={{
                 mt: 2,
                 maxWidth: 980,
-                color: "rgba(255,255,255,0.86)",
+                color:
+                  "rgba(255,255,255,0.86)",
                 lineHeight: 1.7,
-                fontSize: { xs: 16, md: 20 }
+                fontSize: {
+                  xs: 16,
+                  md: 20
+                }
               }}
             >
-              Your profile helps the assistant frame triage questions and
-              dashboard summaries around your context.
+              Your profile is saved once and helps
+              the assistant personalize triage,
+              health risk, and dashboard insights
+              without repeatedly asking for age or
+              gender.
             </Typography>
           </Paper>
 
+          {/* PROFILE FORM */}
           <Paper
             elevation={0}
             sx={{
               mt: { xs: 3, md: 4 },
-              p: { xs: 3, sm: 4, md: 5 },
+              p: {
+                xs: 3,
+                sm: 4,
+                md: 5
+              },
               borderRadius: 3,
-              border: "1px solid var(--border)",
+              border:
+                "1px solid var(--border)",
               bgcolor: "var(--surface)",
-              boxShadow: "0 24px 70px rgba(16, 37, 38, 0.12)",
+              boxShadow:
+                "0 24px 70px rgba(16, 37, 38, 0.12)",
               overflow: "hidden"
             }}
           >
             <Stack
-              direction={{ xs: "column", sm: "row" }}
+              direction={{
+                xs: "column",
+                sm: "row"
+              }}
               spacing={2}
-              alignItems={{ xs: "flex-start", sm: "center" }}
+              alignItems={{
+                xs: "flex-start",
+                sm: "center"
+              }}
               sx={{ mb: 4 }}
             >
-                <Box
-                  sx={{
-                    width: 56,
-                    minWidth: 56,
-                    height: 56,
-                    borderRadius: 2,
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#087f7a",
-                    bgcolor: "#e2f5f1"
-                  }}
+              <Box
+                sx={{
+                  width: 56,
+                  minWidth: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#087f7a",
+                  bgcolor: "#e2f5f1"
+                }}
+              >
+                <AssignmentIndIcon />
+              </Box>
+
+              <Box>
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
                 >
-                  <AssignmentIndIcon />
-                </Box>
+                  Health Profile
+                </Typography>
+
+                <Typography color="var(--muted)">
+                  Complete this once for smarter
+                  personalized health analysis.
+                </Typography>
+              </Box>
+            </Stack>
+
+            <form onSubmit={handleSubmit}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "minmax(180px, 0.85fr) minmax(210px, 0.85fr) minmax(260px, 1.15fr) minmax(260px, 1.15fr)"
+                  },
+                  gap: {
+                    xs: 2.5,
+                    md: 3
+                  },
+                  alignItems: "start"
+                }}
+              >
+                {/* AGE */}
                 <Box>
-                  <Typography variant="h4" fontWeight={800}>
-                    Health Profile
-                  </Typography>
-                  <Typography color="var(--muted)">
-                    Add the essentials before starting your first check.
-                  </Typography>
-                </Box>
-              </Stack>
-
-              <form onSubmit={handleSubmit}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      md: "minmax(180px, 0.85fr) minmax(210px, 0.85fr) minmax(260px, 1.15fr) minmax(260px, 1.15fr)"
-                    },
-                    gap: { xs: 2.5, md: 3 },
-                    alignItems: "start"
-                  }}
-                >
-                  <Box>
-                    <TextField
-                      fullWidth
-                      label="Age"
-                      type="number"
-                      name="age"
-                      required
-                      onChange={handleChange}
-                    />
-                  </Box>
-
-                  <Box>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Gender"
-                      name="gender"
-                      required
-                      onChange={handleChange}
-                    >
-                      <MenuItem value="Male">Male</MenuItem>
-                      <MenuItem value="Female">Female</MenuItem>
-                      <MenuItem value="Other">Other</MenuItem>
-                    </TextField>
-                  </Box>
-
-                  <Box>
-                    <TextField
-                      fullWidth
-                      label="Medical Conditions"
-                      name="conditions"
-                      placeholder="diabetes, asthma"
-                      helperText="Separate multiple conditions with commas."
-                      onChange={handleChange}
-                    />
-                  </Box>
-
-                  <Box>
-                    <TextField
-                      fullWidth
-                      label="Lifestyle"
-                      name="lifestyle"
-                      placeholder="smoker, sedentary, active"
-                      helperText="Add lifestyle notes separated by commas."
-                      onChange={handleChange}
-                    />
-                  </Box>
+                  <TextField
+                    fullWidth
+                    label="Age"
+                    type="number"
+                    name="age"
+                    required
+                    onChange={handleChange}
+                  />
                 </Box>
 
-                <Paper
-                  elevation={0}
-                  sx={{
-                    mt: 3,
-                    p: 2.5,
-                    borderRadius: 2,
-                    bgcolor: "var(--surface-soft)",
-                    border: "1px solid var(--border)"
-                  }}
-                >
-                  <Stack direction="row" spacing={1.5} alignItems="center">
-                    <FavoriteIcon sx={{ color: "#d92d20" }} />
-                    <Typography color="var(--soft-text)">
-                      Severe chest pain, breathlessness, fainting, or sudden
-                      weakness should be treated as urgent.
-                    </Typography>
-                  </Stack>
-                </Paper>
+                {/* GENDER */}
+                <Box>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Gender"
+                    name="gender"
+                    required
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="Male">
+                      Male
+                    </MenuItem>
 
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  startIcon={<SaveIcon />}
-                  sx={{
-                    mt: 3,
-                    py: 1.5,
-                    borderRadius: 2,
-                    bgcolor: "#087f7a",
-                    fontWeight: 800,
-                    boxShadow: "0 16px 34px rgba(8, 127, 122, 0.2)",
-                    "&:hover": { bgcolor: "#055d5b" }
-                  }}
+                    <MenuItem value="Female">
+                      Female
+                    </MenuItem>
+
+                    <MenuItem value="Other">
+                      Other
+                    </MenuItem>
+                  </TextField>
+                </Box>
+
+                {/* MEDICAL CONDITIONS */}
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="Existing Medical Conditions"
+                    name="conditions"
+                    placeholder="diabetes, asthma, allergies"
+                    helperText="Separate multiple conditions with commas."
+                    onChange={handleChange}
+                  />
+                </Box>
+
+                {/* UPDATED HABITS */}
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="Health Habits / Symptoms"
+                    name="habits"
+                    placeholder="smoking, frequent headaches, sedentary work"
+                    helperText="Add habits or recurring symptoms separated by commas."
+                    onChange={handleChange}
+                  />
+                </Box>
+              </Box>
+
+              {/* ALERT BOX */}
+              <Paper
+                elevation={0}
+                sx={{
+                  mt: 3,
+                  p: 2.5,
+                  borderRadius: 2,
+                  bgcolor:
+                    "var(--surface-soft)",
+                  border:
+                    "1px solid var(--border)"
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="center"
                 >
-                  Save and Continue
-                </Button>
-              </form>
-            </Paper>
+                  <FavoriteIcon
+                    sx={{
+                      color: "#d92d20"
+                    }}
+                  />
+
+                  <Typography color="var(--soft-text)">
+                    Severe chest pain,
+                    breathlessness, fainting,
+                    or sudden weakness should
+                    always be treated as urgent.
+                  </Typography>
+                </Stack>
+              </Paper>
+
+              {/* SUBMIT */}
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                size="large"
+                startIcon={<SaveIcon />}
+                sx={{
+                  mt: 3,
+                  py: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "#087f7a",
+                  fontWeight: 800,
+                  boxShadow:
+                    "0 16px 34px rgba(8, 127, 122, 0.2)",
+                  "&:hover": {
+                    bgcolor: "#055d5b"
+                  }
+                }}
+              >
+                Save and Continue
+              </Button>
+            </form>
+          </Paper>
         </Box>
       </Container>
     </Box>

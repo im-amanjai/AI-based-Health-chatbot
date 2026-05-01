@@ -6,6 +6,7 @@ import Signup from "./pages/Signup";
 import ProfileSetup from "./pages/ProfileSetup";
 import ChatPage from "./pages/ChatPage";
 import Dashboard from "./pages/Dashboard";
+import ProfileView from "./pages/ProfileView";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
@@ -50,6 +51,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/profile-view"
+  element={
+    <ProtectedRoute>
+      <ProfileView />
+    </ProtectedRoute>
+  }
+/>
 
         </Routes>
       </Router>

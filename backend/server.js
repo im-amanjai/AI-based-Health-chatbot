@@ -4,19 +4,19 @@ const cors = require("cors");
 
 const connectDB = require("./config/db");
 
-// 🌍 Load environment variables
+// Load environment variables
 dotenv.config();
 
-// 🗄️ Connect MongoDB
+// Connect MongoDB
 connectDB();
 
 const app = express();
 
-// 🛡️ Middleware
+//  Middleware
 app.use(cors());
 app.use(express.json());
 
-// 🚀 Routes
+// Routes
 app.use(
   "/api/auth",
   require("./routes/authRoutes")
@@ -32,27 +32,27 @@ app.use(
   require("./routes/healthRoutes")
 );
 
-// 🧠 Hybrid Rule-Based + AI Dynamic Triage Routes
+//  Hybrid Rule-Based + AI Dynamic Triage Routes
 app.use(
   "/api/triage",
   require("./routes/triageRoutes")
 );
 
-// 🌐 Root Check
+//  Root Check
 app.get("/", (req, res) =>
   res.send(
     "HealthAI API Running Successfully 🚀"
   )
 );
 
-// ⚠️ 404 Handler
+//  404 Handler
 app.use((req, res) => {
   res.status(404).json({
     msg: "Route not found"
   });
 });
 
-// 🔥 Global Error Handler
+//  Global Error Handler
 app.use(
   (err, req, res, next) => {
     console.error(
@@ -67,12 +67,12 @@ app.use(
   }
 );
 
-// 🚀 Start Server
+//  Start Server
 const PORT =
   process.env.PORT || 5000;
 
 app.listen(PORT, () =>
   console.log(
-    `🌐 Server running on http://localhost:${PORT}`
+    `Server running on http://localhost:${PORT}`
   )
 );

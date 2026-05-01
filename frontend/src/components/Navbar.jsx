@@ -11,12 +11,19 @@ import ChatIcon from "@mui/icons-material/Chat";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HomeIcon from "@mui/icons-material/Home";
+import PersonIcon from "@mui/icons-material/Person";
 
-import { useNavigate, useLocation } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation
+} from "react-router-dom";
 
 export default function Navbar() {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
 
   const handleLogout = () => {
     localStorage.clear();
@@ -24,9 +31,17 @@ export default function Navbar() {
   };
 
   // Hide navbar on auth pages
-  const hideNavbarRoutes = ["/login", "/signup"];
+  const hideNavbarRoutes =
+    [
+      "/login",
+      "/signup"
+    ];
 
-  if (hideNavbarRoutes.includes(location.pathname)) {
+  if (
+    hideNavbarRoutes.includes(
+      location.pathname
+    )
+  ) {
     return null;
   }
 
@@ -35,22 +50,29 @@ export default function Navbar() {
       position="sticky"
       elevation={3}
       sx={{
-        background: "linear-gradient(to right, #1976d2, #42a5f5)"
+        background:
+          "linear-gradient(to right, #1976d2, #42a5f5)"
       }}
     >
       <Toolbar>
-
         {/* Logo / Brand */}
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
+            alignItems:
+              "center",
             flexGrow: 1,
             cursor: "pointer"
           }}
-          onClick={() => navigate("/")}
+          onClick={() =>
+            navigate("/")
+          }
         >
-          <HealthAndSafetyIcon sx={{ mr: 1 }} />
+          <HealthAndSafetyIcon
+            sx={{
+              mr: 1
+            }}
+          />
 
           <Typography
             variant="h6"
@@ -60,50 +82,108 @@ export default function Navbar() {
           </Typography>
         </Box>
 
-        {/* Navigation Buttons */}
+        {/* HOME */}
         <Button
           color="inherit"
-          startIcon={<HomeIcon />}
-          onClick={() => navigate("/")}
-          sx={{ mx: 1, borderRadius: 3 }}
+          startIcon={
+            <HomeIcon />
+          }
+          onClick={() =>
+            navigate("/")
+          }
+          sx={{
+            mx: 1,
+            borderRadius: 3
+          }}
         >
           Home
         </Button>
 
+        {/* CHAT */}
         <Button
           color="inherit"
-          startIcon={<ChatIcon />}
-          onClick={() => navigate("/chat")}
-          sx={{ mx: 1, borderRadius: 3 }}
+          startIcon={
+            <ChatIcon />
+          }
+          onClick={() =>
+            navigate("/chat")
+          }
+          sx={{
+            mx: 1,
+            borderRadius: 3
+          }}
         >
           Chat
         </Button>
 
+        {/* DASHBOARD */}
         <Button
           color="inherit"
-          startIcon={<DashboardIcon />}
-          onClick={() => navigate("/dashboard")}
-          sx={{ mx: 1, borderRadius: 3 }}
+          startIcon={
+            <DashboardIcon />
+          }
+          onClick={() =>
+            navigate(
+              "/dashboard"
+            )
+          }
+          sx={{
+            mx: 1,
+            borderRadius: 3
+          }}
         >
           Dashboard
         </Button>
 
+        {/* PROFILE */}
         <Button
           color="inherit"
-          startIcon={<LogoutIcon />}
-          onClick={handleLogout}
+          startIcon={
+            <PersonIcon />
+          }
+          onClick={() =>
+            navigate(
+              "/profile-view"
+            )
+          }
+          sx={{
+            mx: 1,
+            borderRadius: 3,
+            bgcolor:
+              "rgba(255,255,255,0.12)",
+            "&:hover":
+              {
+                bgcolor:
+                  "rgba(255,255,255,0.22)"
+              }
+          }}
+        >
+          Profile
+        </Button>
+
+        {/* LOGOUT */}
+        <Button
+          color="inherit"
+          startIcon={
+            <LogoutIcon />
+          }
+          onClick={
+            handleLogout
+          }
           sx={{
             ml: 2,
             borderRadius: 3,
-            bgcolor: "rgba(255,255,255,0.15)",
-            "&:hover": {
-              bgcolor: "rgba(255,255,255,0.25)"
-            }
+            bgcolor:
+              "rgba(255,255,255,0.15)",
+            "&:hover":
+              {
+                bgcolor:
+                  "rgba(255,255,255,0.25)"
+              }
           }}
         >
           Logout
         </Button>
-
       </Toolbar>
     </AppBar>
   );
