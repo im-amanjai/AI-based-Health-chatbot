@@ -124,10 +124,11 @@ export default function ChatPage() {
   const [voiceMode, setVoiceMode] = useState(true);
   const [chatHistory, setChatHistory] = useState([]);
 
-  const [location, setLocation] = useState({
-    lat: null,
-    lng: null,
-  });
+const [location, setLocation] = useState({
+  lat: null,
+  lng: null,
+  status: "loading"
+});
 
   const [triageMode, setTriageMode] = useState(false);
   const [currentSymptom, setCurrentSymptom] = useState("");
@@ -137,29 +138,38 @@ export default function ChatPage() {
 
   const chatEndRef = useRef(null);
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        () => {
-          setLocation({
-            lat: 12.9716,
-            lng: 77.5946,
-          });
-        },
-      );
-    } else {
+useEffect(() => {
+  if (!navigator.geolocation) {
+    setLocation({
+      lat: null,
+      lng: null,
+      status: "unsupported"
+    });
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
       setLocation({
-        lat: 12.9716,
-        lng: 77.5946,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        status: "granted"
       });
+    },
+    () => {
+      setLocation({
+        lat: null,
+        lng: null,
+        status: "denied"
+      });
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 60000
     }
-  }, []);
+  );
+}, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({
@@ -543,7 +553,14 @@ const speakText = (text) => {
             <Chip
               icon={<GpsFixedIcon />}
               label={
-                location.lat ? "Live location enabled" : "Default location"
+                location.status === "granted"
+  ? "Live location enabled"
+  : location.status === "denied"
+    ? "Location permission denied"
+    : location.status === "unsupported"
+      ? "Location unsupported"
+      : "Getting location..."
+
               }
               sx={{
                 borderRadius: 2,
@@ -979,6 +996,13 @@ const speakText = (text) => {
                                     </Typography>
                                   </Alert>
                                 )}
+                                {chat.emergency &&
+  location.status !== "granted" && (
+    <Alert severity="warning" sx={{ borderRadius: 2 }}>
+      Allow location permission to get nearby hospitals.
+    </Alert>
+  )}
+
 
                                 {chat.hospitals?.length > 0 && (
                                   <Box>
@@ -997,33 +1021,63 @@ const speakText = (text) => {
                                       }}
                                     >
                                       {chat.hospitals.map((hospital, i) => (
-                                        <Box key={i} sx={{ minWidth: 0 }}>
-                                          <Paper
-                                            elevation={0}
-                                            sx={{
-                                              p: 1.6,
-                                              borderRadius: 2,
-                                              bgcolor: "#f0fdf4",
-                                              border: "1px solid #bbf7d0",
-                                              color: lightPanelText.insight,
-                                            }}
-                                          >
-                                            <Stack
-                                              direction="row"
-                                              spacing={1.2}
-                                              alignItems="center"
-                                            >
-                                              <LocalHospitalIcon
-                                                sx={{ color: "#15803d" }}
-                                              />
+  <Box key={i} sx={{ minWidth: 0 }}>
+    <Paper
+      elevation={0}
+      sx={{
+        p: 1.6,
+        borderRadius: 2,
+        bgcolor: "#f0fdf4",
+        border: "1px solid #bbf7d0",
+        color: lightPanelText.insight,
+      }}
+    >
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={1.2} alignItems="center">
+          <LocalHospitalIcon sx={{ color: "#15803d" }} />
 
-                                              <Typography fontWeight={800}>
-                                                {hospital.name}
-                                              </Typography>
-                                            </Stack>
-                                          </Paper>
-                                        </Box>
-                                      ))}
+          <Box>
+            <Typography fontWeight={800}>
+              {hospital.name}
+            </Typography>
+
+            {hospital.distance && (
+              <Typography variant="caption" color="#31575a">
+                {hospital.distance}
+              </Typography>
+            )}
+          </Box>
+        </Stack>
+
+        {hospital.address && (
+          <Typography variant="body2" color="#31575a">
+            {hospital.address}
+          </Typography>
+        )}
+
+        {hospital.mapUrl && (
+          <Button
+            href={hospital.mapUrl}
+            target="_blank"
+            rel="noreferrer"
+            size="small"
+            variant="outlined"
+            sx={{
+              alignSelf: "flex-start",
+              borderRadius: 2,
+              color: "#15803d",
+              borderColor: "#bbf7d0",
+              fontWeight: 800
+            }}
+          >
+            Open Map
+          </Button>
+        )}
+      </Stack>
+    </Paper>
+  </Box>
+))}
+
                                     </Box>
                                   </Box>
                                 )}
@@ -1179,9 +1233,10 @@ triageMode
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <GpsFixedIcon sx={{ color: "#5eead4" }} />
                     <Typography>
-                      {location.lat
-                        ? "Location ready for hospital lookup"
-                        : "Using fallback location"}
+                      {location.status === "granted"
+  ? "Location ready for hospital lookup"
+  : "Enable location for nearby hospitals"}
+
                     </Typography>
                   </Stack>
                   <Stack direction="row" spacing={1.5} alignItems="center">

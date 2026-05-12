@@ -1,77 +1,54 @@
 const axios = require("axios");
-const qs = require("querystring");
+
+const GEOAPIFY_PLACES_URL = "https://api.geoapify.com/v2/places";
+
+const formatDistance = (meters) => {
+  if (!meters) return "Distance unavailable";
+  return `${(meters / 1000).toFixed(1)} km`;
+};
 
 exports.getNearbyHospitals = async (lat, lng) => {
-  // 🟢 Try Overpass first
   try {
-    const query = `
-[out:json][timeout:25];
-(
-  node["amenity"="hospital"](around:10000,${lat},${lng});
-  way["amenity"="hospital"](around:10000,${lat},${lng});
-  relation["amenity"="hospital"](around:10000,${lat},${lng});
-);
-out center;
-`;
-
-    const response = await axios.post(
-      "https://overpass-api.de/api/interpreter",
-      qs.stringify({ data: query }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-        timeout: 10000
-      }
-    );
-
-    const elements = response.data?.elements || [];
-
-    if (elements.length > 0) {
-      return elements.slice(0, 5).map((el) => ({
-        name: el.tags?.name || "Unnamed Hospital",
-        lat: el.lat || el.center?.lat,
-        lng: el.lon || el.center?.lon,
-        distance: `${(Math.random() * 5 + 1).toFixed(1)} km`
-      }));
+    if (!process.env.GEOAPIFY_API_KEY) {
+      console.error("Missing GEOAPIFY_API_KEY");
+      return [];
     }
 
-  } catch (err) {
-    console.log("Overpass failed → switching to Nominatim");
-  }
+    const response = await axios.get(GEOAPIFY_PLACES_URL, {
+      params: {
+        categories: "healthcare.hospital",
+        filter: `circle:${lng},${lat},10000`,
+        bias: `proximity:${lng},${lat}`,
+        limit: 5,
+        apiKey: process.env.GEOAPIFY_API_KEY
+      },
+      timeout: 10000
+    });
 
-  // 🟡 Nominatim fallback
-  try {
-    const response = await axios.get(
-      "https://nominatim.openstreetmap.org/search",
-      {
-        params: {
-          q: "hospital",
-          format: "json",
-          limit: 5,
-          viewbox: `${lng - 0.1},${lat - 0.1},${lng + 0.1},${lat + 0.1}`,
-          bounded: 1
-        },
-        headers: {
-          "User-Agent": "health-ai-app"
-        }
-      }
+    const hospitals = response.data?.features || [];
+
+    return hospitals.map((item) => {
+      const properties = item.properties || {};
+      const coordinates = item.geometry?.coordinates || [];
+
+      const hospitalLng = properties.lon || coordinates[0];
+      const hospitalLat = properties.lat || coordinates[1];
+
+      return {
+        name: properties.name || properties.address_line1 || "Nearby Hospital",
+        address: properties.formatted || "Address unavailable",
+        lat: hospitalLat,
+        lng: hospitalLng,
+        distance: formatDistance(properties.distance),
+        mapUrl: `https://www.google.com/maps/search/?api=1&query=${hospitalLat},${hospitalLng}`
+      };
+    });
+  } catch (error) {
+    console.error(
+      "Geoapify hospital lookup failed:",
+      error.response?.data || error.message
     );
 
-    return response.data.map((place) => ({
-      name: place.display_name,
-      lat: Number(place.lat),
-      lng: Number(place.lon),
-      distance: `${(Math.random() * 5 + 1).toFixed(1)} km`
-    }));
-
-  } catch (err) {
-    console.log("Nominatim failed → using fallback");
+    return [];
   }
-
-  // 🔴 Final fallback
-  return [
-    { name: "City Hospital", lat, lng, distance: "1.2 km" },
-    { name: "Nearby Clinic", lat, lng, distance: "2.5 km" }
-  ];
 };
