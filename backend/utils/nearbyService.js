@@ -17,9 +17,9 @@ exports.getNearbyHospitals = async (lat, lng) => {
     const response = await axios.get(GEOAPIFY_PLACES_URL, {
       params: {
         categories: "healthcare.hospital",
-        filter: `circle:${lng},${lat},10000`,
+        filter: `circle:${lng},${lat},25000`,
         bias: `proximity:${lng},${lat}`,
-        limit: 5,
+        limit: 10,
         apiKey: process.env.GEOAPIFY_API_KEY
       },
       timeout: 10000
