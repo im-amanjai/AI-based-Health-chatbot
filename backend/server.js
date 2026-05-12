@@ -76,4 +76,8 @@ app.listen(PORT, () =>
     `Server running on http://localhost:${PORT}`
   )
 );
-console.log("API KEY:", process.env.GEMINI_API_KEY?.slice(0,10));
+app.use(cors({
+  origin: [process.env.FRONTEND_URL, "http://localhost:3000"],
+}));
+
+// console.log("API KEY:", process.env.GEMINI_API_KEY?.slice(0,10));
