@@ -5,7 +5,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 
 // Load environment variables
-dotenv.config();
+require("dotenv").config({ override: true });
 
 // Connect MongoDB
 connectDB();
@@ -41,7 +41,7 @@ app.use(
 //  Root Check
 app.get("/", (req, res) =>
   res.send(
-    "HealthAI API Running Successfully 🚀"
+    "HealthAI API Running Successfully"
   )
 );
 
@@ -76,3 +76,4 @@ app.listen(PORT, () =>
     `Server running on http://localhost:${PORT}`
   )
 );
+console.log("API KEY:", process.env.GEMINI_API_KEY?.slice(0,10));

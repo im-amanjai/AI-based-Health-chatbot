@@ -170,17 +170,19 @@ export default function ChatPage() {
 const handleSend = async (
   voiceInput = null
 ) => {
-  const finalMessage =
-    voiceInput || message;
+const finalMessage =
+  voiceInput || message;
 
-  if (
-    !finalMessage.trim()
-  )
-    return;
+const safeMessage =
+  typeof finalMessage === "string"
+    ? finalMessage
+    : String(finalMessage || "");
+
+if (!safeMessage.trim()) return;
 
   const userMessage = {
     sender: "user",
-    text: finalMessage
+    text: safeMessage
   };
 
   setChatHistory(

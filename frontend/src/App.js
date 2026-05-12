@@ -19,12 +19,12 @@ function App() {
         <ThemeToggle />
         <Routes>
 
-        {/* 🌐 Public Routes */}
+        {/*  Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* 🔐 Protected Routes */}
+        {/* Protected Routes */}
         <Route
           path="/profile"
           element={
